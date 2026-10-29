@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard · FinWise</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="dashboard-page">
+  <header class="topbar">
+    <a class="wordmark" href="{{ url_for('dashboard') }}">FINWISE<span>.</span></a>
+    <nav><span class="nav-current">Overview</span><span class="user-chip">{{ user.name }}</span><a class="logout" href="{{ url_for('logout') }}">Log out ↗</a></nav>
+  </header>
+  <main class="main-wrap">
+    <section class="welcome-row">
+      <div><div class="auth-label">YOUR FINANCIAL SPACE</div><h1>Good to see you, {{ user.name.split(' ')[0] }}.</h1><p class="muted">A clearer view of your money starts here.</p></div>
+      <div class="date-pill">{{ month_label }}</div>
+    </section>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}{% for category, message in messages %}<div class="flash {{ category }}">{{ message }}</div>{% endfor %}{% endif %}
+    {% endwith %}
+    <section class="stats-grid">
+      <article class="stat-card dark-card"><div class="stat-top"><span>NET THIS MONTH</span><span class="stat-mark">↗</span></div><div class="stat-number">₹{{ "%.2f"|format(balance) }}</div><p>Income minus expenses</p></article>
+      <article class="stat-card"><div class="stat-top"><span>INCOME</span><span class="stat-mark">＋</span></div><div class="stat-number">₹{{ "%.2f"|format(income) }}</div><p>This month</p></article>
+      <article class="stat-card"><div class="stat-top"><span>EXPENSES</span><span class="stat-mark">−</span></div><div class="stat-number">₹{{ "%.2f"|format(expenses) }}</div><p>This month</p></article>
+      <article class="stat-card"><div class="stat-top"><span>BUDGET LEFT</span><span class="stat-mark">◷</span></div><div class="stat-number">₹{{ "%.2f"|format(user.monthly_budget - expenses) }}</div><p>From ₹{{ "%.0f"|format(user.monthly_budget) }} monthly budget</p></article>
+    </section>
+    <section class="content-grid">
+      <article class="panel">
+        <div class="panel-heading"><div><div class="auth-label">KEEP TRACK</div><h2>Add a transaction</h2></div><span class="circle-icon">＋</span></div>
+        <form action="{{ url_for('add_transaction') }}" method="post" class="form-grid">
+          <div class="field wide"><label>Transaction name</label><input name="title" placeholder="e.g. Groceries, stipend" required maxlength="120"></div>
+          <div class="field"><label>Amount (₹)</label><input name="amount" type="number" min="0.01" step="0.01" placeholder="500" required></div>
+          <div class="field"><label>Type</label><select name="kind"><option value="expense">Expense</option><option value="income">Income</option></select></div>
+          <div class="field"><label>Category</label><select name="category">
+            <option value="Food">🍔 Food & Dining</option>
+            <option value="Travel">✈️ Travel</option>
+            <option value="Transport">🚕 Transport</option>
+            <option value="Bills">🧾 Bills & Utilities</option>
+            <option value="Shopping">🛍️ Shopping</option>
+            <option value="Education">📚 Education</option>
+            <option value="Health">💊 Health</option>
+            <option value="Entertainment">🎬 Entertainment</option>
+            <option value="Salary">💼 Salary / Income</option>
+            <option value="Home">🏠 Home</option>
+            <option value="Savings">🐷 Savings</option>
+            <option value="Other">📦 Other</option>
+          </select></div>
+          <div class="field"><label>Date</label><input name="txn_date" type="date" value="{{ today if today is defined else '' }}"></div>
+          <button class="button button-dark wide" type="submit">Save transaction <span>↗</span></button>
+        </form>
+      </article>
+      <article class="panel">
+        <div class="panel-heading"><div><div class="auth-label">PLAN AHEAD</div><h2>Monthly budget</h2></div><span class="circle-icon">↗</span></div>
+        <p class="muted small-copy">Set a spending limit to keep your month on track.</p>
+        <form action="{{ url_for('update_budget') }}" method="post" class="stack-form">
+          <label>Budget amount (₹)</label><input name="monthly_budget" type="number" min="1" step="1" value="{{ '%.0f'|format(user.monthly_budget) }}" required>
+          <button class="button button-outline" type="submit">Update budget</button>
+        </form>
+        {% set spent_pct = (expenses / user.monthly_budget * 100) if user.monthly_budget else 0 %}
+        <div class="budget-line"><span>Budget used</span><strong>{{ "%.0f"|format(spent_pct) }}%</strong></div>
+        <div class="progress-track"><div class="progress-fill" style="width: {{ [spent_pct, 100]|min }}%"></div></div>
+        <p class="muted small-copy">₹{{ "%.2f"|format([user.monthly_budget-expenses, 0]|max) }} remaining in your budget</p>
+      </article>
+    </section>
+    <section class="content-grid lower-grid">
+      <article class="panel">
+        <div class="panel-heading"><div><div class="auth-label">RECENT ACTIVITY</div><h2>Transactions</h2></div><span class="count-pill">{{ transactions|length }} shown</span></div>
+        {% if transactions %}
+          <div class="table-wrap"><table><thead><tr><th>DETAILS</th><th>DATE</th><th>AMOUNT</th><th></th></tr></thead><tbody>
+          {% for t in transactions %}<tr><td><strong>{{ t.title }}</strong><small><span class="category-icon">{% if t.category == 'Food' %}🍔{% elif t.category == 'Travel' %}✈️{% elif t.category == 'Transport' %}🚕{% elif t.category == 'Bills' %}🧾{% elif t.category == 'Shopping' %}🛍️{% elif t.category == 'Education' %}📚{% elif t.category == 'Health' %}💊{% elif t.category == 'Entertainment' %}🎬{% elif t.category == 'Salary' %}💼{% elif t.category == 'Home' %}🏠{% elif t.category == 'Savings' %}🐷{% else %}📦{% endif %}</span> {{ t.category }}</small></td><td>{{ t.txn_date.strftime('%d %b %Y') }}</td><td class="{{ 'positive' if t.kind == 'income' else '' }}">{{ '+' if t.kind == 'income' else '−' }}₹{{ "%.2f"|format(t.amount) }}</td><td><form action="{{ url_for('delete_transaction', txn_id=t.id) }}" method="post"><button class="delete-btn" title="Delete transaction" aria-label="Delete transaction">×</button></form></td></tr>{% endfor %}
+          </tbody></table></div>
+        {% else %}<div class="empty-state"><span>○</span><strong>No transactions yet</strong><p>Add your first income or expense above.</p></div>{% endif %}
+      </article>
+      <article class="panel">
+        <div class="panel-heading"><div><div class="auth-label">FUTURE YOU</div><h2>Savings goals</h2></div><span class="circle-icon">◎</span></div>
+        <form action="{{ url_for('add_goal') }}" method="post" class="goal-form">
+          <input name="title" placeholder="Goal name (e.g. New laptop)" maxlength="120" required>
+          <div class="goal-inputs"><input name="target" type="number" min="1" step="1" placeholder="Target ₹" required><input name="saved" type="number" min="0" step="1" placeholder="Saved ₹" value="0"></div>
+          <button class="button button-outline" type="submit">Add savings goal</button>
+        </form>
+        {% if goals %}
+          <div class="goals-list">{% for g in goals %}{% set pct = (g.saved / g.target * 100) if g.target else 0 %}<div class="goal-item"><div class="goal-title"><strong>{{ g.title }}</strong><form action="{{ url_for('delete_goal', goal_id=g.id) }}" method="post"><button class="delete-btn" title="Delete goal" aria-label="Delete goal">×</button></form></div><div class="goal-meta"><span>₹{{ "%.0f"|format(g.saved) }} saved</span><span>₹{{ "%.0f"|format(g.target) }}</span></div><div class="progress-track"><div class="progress-fill" style="width: {{ [pct, 100]|min }}%"></div></div></div>{% endfor %}</div>
+        {% else %}<div class="empty-state compact"><span>◎</span><p>Set a goal and watch your progress grow.</p></div>{% endif %}
+      </article>
+    </section>
+    <footer>FINWISE<span>.</span> <small>Personal finance organizer · Not a bank or financial adviser.</small></footer>
+  </main>
+</body>
+</html>
