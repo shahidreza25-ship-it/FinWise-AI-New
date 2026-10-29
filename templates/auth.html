@@ -1,0 +1,59 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ 'Create account' if mode == 'signup' else 'Log in' }} · FinWise</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="auth-page">
+  <main class="auth-shell">
+    <a class="wordmark" href="{{ url_for('index') }}">FINWISE<span>.</span></a>
+    <div class="auth-label">PERSONAL FINANCE, MADE CLEAR</div>
+
+    <h1>{{ 'Create your account' if mode == 'signup' else 'Welcome back' }}</h1>
+    <p class="muted">
+      {{ 'Build better money habits, one step at a time.' if mode == 'signup' else 'Log in to continue to your personal dashboard.' }}
+    </p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="post" class="auth-form">
+      {% if mode == 'signup' %}
+        <label for="name">Full name</label>
+        <input id="name" name="name" placeholder="Your name"
+               maxlength="80" required autocomplete="name">
+      {% endif %}
+
+      <label for="email">Email address</label>
+      <input id="email" name="email" type="email"
+             placeholder="you@example.com" required autocomplete="email">
+
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password"
+             placeholder="At least 8 characters" minlength="8" required
+             autocomplete="{{ 'new-password' if mode == 'signup' else 'current-password' }}">
+
+      <button class="button button-dark" type="submit">
+        {{ 'Create account' if mode == 'signup' else 'Log in' }} <span>↗</span>
+      </button>
+    </form>
+
+    <p class="switch-text">
+      {{ 'Already registered?' if mode == 'signup' else 'New to FinWise?' }}
+      <a href="{{ url_for('login') if mode == 'signup' else url_for('signup') }}">
+        {{ 'Log in' if mode == 'signup' else 'Create an account' }}
+      </a>
+    </p>
+
+    <div class="privacy-note">Your money. Your plan. Your control.</div>
+  </main>
+</body>
+</html>
